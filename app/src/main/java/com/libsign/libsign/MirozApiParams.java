@@ -74,6 +74,16 @@ public class MirozApiParams {
         return sb.toString();
     }
 
+    public static Map<String, String> getMLinkParams(String vid){
+        Map<String, String> params = getCommonParams();
+        params.put("id",vid);
+        params.put("unixtime", (System.currentTimeMillis() / 1000) + "");
+        String str = getCommonUb();
+        String ub = DecodeUtils.d(str.getBytes(), SU.ig2(str));
+        params.put("ub", ub);
+        return params;
+    }
+
     public static Map<String, String> getMediaDetailsParams(String vid) {
         Map<String, String> params = getCommonParams();
         params.put("m_id", vid);

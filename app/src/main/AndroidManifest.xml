@@ -25,6 +25,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".act.MovieBaseActivity"/>
+        <activity android:name=".act.TextShowActivity"/>
     </application>
 
 </manifest>

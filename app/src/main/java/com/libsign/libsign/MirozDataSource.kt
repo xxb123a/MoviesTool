@@ -49,13 +49,33 @@ object MirozDataSource {
     fun requestVideoLink(vid: String, callback: CommonCallback<String>) {
         requestInitData(object : CommonCallback<String> {
             override fun onCall(value: String) {
-                requestVideoDetails(vid, callback)
+                requestMLink(vid, callback)
             }
 
             override fun onFailed(msg: String) {
                 callback.onFailed(msg)
             }
         })
+    }
+
+    private fun requestMLink(vid: String, callback: CommonCallback<String>){
+        val params = MirozApiParams.map2MultiMapBody(MirozApiParams.getMLinkParams(vid))
+        val api = DataApi.createRetrofit(serverHost).create(MirozApi::class.java)
+        val dis = api.findMLink(params)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({ s: String ->
+                val link = parseVideoUrl(s)
+                if (link.isEmpty()) {
+                    callback.onFailed("video link json error")
+                } else {
+                    callback.onCall(link)
+                }
+            }) { throwable: Throwable ->
+                callback.onFailed(
+                    throwable.message!!
+                )
+            }
     }
 
     private fun requestVideoDetails(vid: String, callback: CommonCallback<String>) {
@@ -67,7 +87,7 @@ object MirozDataSource {
             .subscribe({ s: String ->
                 val link = parseVideoUrl(s)
                 if (link.isEmpty()) {
-                    callback.onFailed("json error")
+                    callback.onFailed("video link json error")
                 } else {
                     callback.onCall(link)
                 }
@@ -78,7 +98,7 @@ object MirozDataSource {
             }
     }
 
-    private fun requestTvLink(ssnId:String, callback: CommonCallback<String>){
+    fun requestTvLink(ssnId:String, callback: CommonCallback<String>){
         val params = MirozApiParams.map2MultiMapBody(MirozApiParams.getTTLinkParams(ssnId))
         val api = DataApi.createRetrofit(serverHost).create(MirozApi::class.java)
         val dis = api.findTTLink(params)
@@ -87,7 +107,7 @@ object MirozDataSource {
             .subscribe({ s: String ->
                 val link = parseVideoUrl(s)
                 if (link.isEmpty()) {
-                    callback.onFailed("json error")
+                    callback.onFailed("tv link json error")
                 } else {
                     callback.onCall(link)
                 }

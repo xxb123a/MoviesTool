@@ -31,7 +31,9 @@ public interface MirozApi {
     @Multipart
     @POST("/144/")
     Observable<String> findVideoDetails(@PartMap Map<String, RequestBody> map);
-
+    @Multipart
+    @POST("/317/")
+    Observable<String> findMLink(@PartMap Map<String, RequestBody> map);
     @FormUrlEncoded
     @POST("/87/")
     Observable<String> findInitParams(@FieldMap Map<String,String> map);

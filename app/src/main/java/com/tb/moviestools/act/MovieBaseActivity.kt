@@ -2,6 +2,7 @@ package com.tb.moviestools.act
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -9,6 +10,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.tb.moviestools.*
 import com.tb.moviestools.db.entity.VideoEntity
+import com.tb.moviestools.load.MovieManager
 import com.tb.moviestools.task.MutilLinkRoadSaveTask
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
@@ -16,7 +18,6 @@ import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import java.util.Collections
 import java.util.concurrent.TimeUnit
-import java.util.stream.Collectors
 
 /**
  *_    .--,       .--,
@@ -63,6 +64,7 @@ class MovieBaseActivity : AppCompatActivity() {
         override fun update(failedCount: Int, successCount: Int, totalCount: Int) {
             mShowInfoTv.text = "link create failed $failedCount suc $successCount total $totalCount"
             if(failedCount + successCount >= totalCount){
+                mShowInfoTv.text = "链接创建完成 失败个数 $failedCount 成功个数 $successCount"
                 setAllBtn(true)
             }
         }
@@ -72,7 +74,7 @@ class MovieBaseActivity : AppCompatActivity() {
     private var mStartDispose: Disposable? = null
     private val mShowInfoTv by lazy { findViewById<TextView>(R.id.tv_info) }
     private val mBtn by lazy { findViewById<View>(R.id.tv_button) }
-    private val mAllVideos = Collections.synchronizedList(ArrayList<VideoEntity>())
+    private val mAllVideos = ArrayList<VideoEntity>()
     private val mBtnCreateLink by lazy { findViewById<View>(R.id.tv_crate_link) }
 
     private val mBtnUploadLink by lazy { findViewById<View>(R.id.tv_upload_link) }
@@ -82,9 +84,7 @@ class MovieBaseActivity : AppCompatActivity() {
         setContentView(R.layout.activity_movie_load)
         MovieManager.setMovieCallback(movieCallback)
         mBtn.setOnClickListener {
-            setAllBtn(false)
-            MovieManager.loadMovies()
-            startDispose()
+            loadBaseMovies()
         }
         mBtnCreateLink.setOnClickListener {
             if(mAllVideos.isEmpty())return@setOnClickListener
@@ -101,6 +101,21 @@ class MovieBaseActivity : AppCompatActivity() {
         }
     }
 
+
+    private fun loadBaseMovies(){
+        if(mAllVideos.isEmpty()){
+            setAllBtn(false)
+            MovieManager.loadMovies()
+            startDispose()
+        }else{
+            showReGetDialog {
+                setAllBtn(false)
+                MovieManager.loadMovies()
+                startDispose()
+            }
+        }
+    }
+
     private fun setAllBtn(enable:Boolean){
         mBtn.isEnabled = enable
         mBtnCreateLink.isEnabled = enable
@@ -109,7 +124,7 @@ class MovieBaseActivity : AppCompatActivity() {
 
     private fun startCreateLink(){
         linkCreateTask?.stop()
-        val task = MutilLinkRoadSaveTask(mAllVideos,20)
+        val task = MutilLinkRoadSaveTask(mAllVideos,1)
         linkCreateTask = task
         task.setCallback(updateLinkProgressTask)
         task.start()
@@ -121,10 +136,7 @@ class MovieBaseActivity : AppCompatActivity() {
         mStartDispose = Observable.just(TheApp.dao)
             .map {
                 mAllVideos.addAll(it.getAll(0))
-                mAllVideos
-            }
-            .map {
-                it.size
+                mAllVideos.size
             }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
@@ -167,6 +179,19 @@ class MovieBaseActivity : AppCompatActivity() {
                 it.dispose()
             }
         }
+    }
+
+    private fun showReGetDialog(call:()->Unit){
+        AlertDialog.Builder(this)
+            .setMessage("你需要重新获取基本数据吗")
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.cancel()
+            }
+            .setPositiveButton("获取") { dialog, _ ->
+                dialog.cancel()
+                call.invoke()
+            }
+            .show()
     }
 
     override fun onDestroy() {

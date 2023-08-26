@@ -26,6 +26,8 @@
         </activity>
         <activity android:name=".act.MovieBaseActivity"/>
         <activity android:name=".act.TextShowActivity"/>
+        <activity android:name=".act.FileDirBrowserActivity"/>
+        <activity android:name=".act.TvBaseActivity"/>
     </application>
 
 </manifest>

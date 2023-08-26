@@ -2,6 +2,7 @@ package com.tb.moviestools.db.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 /**
@@ -30,8 +31,27 @@ class VideoEntity {
     var name: String = ""
 
     @ColumnInfo(name = "_vid")
-    var did : String = ""
+    var did: String = ""
 
     @ColumnInfo(name = "_type")
-    var type : Int = 0
+    var type: Int = 0
+
+    @Ignore
+    var linkTime: Long = 0
+
+    @Ignore
+    var link = ""
+
+    fun getDLink(): String {
+        //一个小时内有效
+        if (link.isNotEmpty() && (System.currentTimeMillis() - linkTime) < 1000 * 60 * 60) {
+            return link
+        }
+        return ""
+    }
+
+    fun updateLink(link: String) {
+        this.link = link
+        linkTime = System.currentTimeMillis()
+    }
 }

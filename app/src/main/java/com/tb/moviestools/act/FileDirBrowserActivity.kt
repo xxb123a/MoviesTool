@@ -18,6 +18,8 @@ import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
  *_    .--,       .--,
@@ -74,7 +76,7 @@ class FileDirBrowserActivity : AppCompatActivity() {
         if (files == null) return emptyList()
         val list = arrayListOf<FileEntity>()
         files.forEach { file ->
-            list.add(FileEntity(file.absolutePath, file.isFile, file.name))
+            list.add(FileEntity(file.absolutePath, file.isFile, file.name,file.lastModified()))
         }
         return list
     }
@@ -95,6 +97,7 @@ class FileDirBrowserActivity : AppCompatActivity() {
     }
 
     inner class FileAdapter(val datas: List<FileEntity>) : RecyclerView.Adapter<FileViewHolder>() {
+        private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
             val view =
                 LayoutInflater.from(parent.context).inflate(R.layout.item_file, parent, false)
@@ -107,11 +110,12 @@ class FileDirBrowserActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
             val data = datas[position]
-            if (!data.isFile) {
-                holder.content().text = "(文件夹)" + data.name
+            val text = if (!data.isFile) {
+                "(文件夹)" + data.name
             } else {
-                holder.content().text = data.name
-            }
+                data.name
+            } + "\n time : ${sdf.format(data.time)}"
+            holder.content().text = text
             holder.itemView.setOnClickListener {
                 if (data.isFile) {
                     TextShowActivity.launch(this@FileDirBrowserActivity, data.path)
@@ -122,5 +126,5 @@ class FileDirBrowserActivity : AppCompatActivity() {
         }
     }
 
-    data class FileEntity(val path: String, val isFile: Boolean, val name: String)
+    data class FileEntity(val path: String, val isFile: Boolean, val name: String,val time:Long)
 }

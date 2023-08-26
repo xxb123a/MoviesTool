@@ -1,5 +1,9 @@
-package com.tb.moviestools
+package com.tb.moviestools.load
 
+import com.tb.moviestools.AppLog
+import com.tb.moviestools.CommonCallback
+import com.tb.moviestools.TheApp
+import com.tb.moviestools.VideoInfo
 import com.tb.moviestools.api.AllDataHelper
 import com.tb.moviestools.db.entity.VideoEntity
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
@@ -40,8 +44,8 @@ object MovieManager {
 
     }
 
-    fun setMovieCallback(callback:CommonCallback<List<VideoInfo>>?){
-        this.mMovieAttachCallback = callback
+    fun setMovieCallback(callback: CommonCallback<List<VideoInfo>>?){
+        mMovieAttachCallback = callback
     }
 
     fun getMovieCount():Int{

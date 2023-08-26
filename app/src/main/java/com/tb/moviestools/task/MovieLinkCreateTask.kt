@@ -29,7 +29,7 @@ import java.io.File
  * date        : 2023/8/26 09:36
  * description :
  */
-class MovieLinkCreateTask(val video: VideoEntity,val okhttp:OkHttpClient) {
+class MovieLinkCreateTask(val video: VideoEntity, val okhttp: OkHttpClient) {
     private var callback: CommonCallback<String>? = null
     private val m3u8Path by lazy { CacheFileTool.findM3u8Path(video) }
     private val mDescPath by lazy { CacheFileTool.findDescPath(video) }
@@ -37,6 +37,9 @@ class MovieLinkCreateTask(val video: VideoEntity,val okhttp:OkHttpClient) {
     private var mDis: Disposable? = null
     private val mLinkCallback = object : CommonCallback<String> {
         override fun onCall(value: String) {
+            if(mDownloadLink.isEmpty()){
+                video.updateLink(value)
+            }
             mDownloadLink = value
             if (value.isNotEmpty()) {
                 //进行下一步
@@ -60,14 +63,20 @@ class MovieLinkCreateTask(val video: VideoEntity,val okhttp:OkHttpClient) {
             .map { checkFile(m3u8Path) && checkFile(mDescPath) }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe{
+            .subscribe {
                 if (it) {
                     callback?.onCall("")
-                }else{
-                    if (video.type == 0) {
-                        MirozDataSource.requestVideoLink(video.did, mLinkCallback)
+                } else {
+                    val link = video.getDLink()
+                    if (link.isNotEmpty()) {
+                        mDownloadLink = link
+                        mLinkCallback.onCall(link)
                     } else {
-                        MirozDataSource.requestTvLink(video.did, mLinkCallback)
+                        if (video.type == 0) {
+                            MirozDataSource.requestVideoLink(video.did, mLinkCallback)
+                        } else {
+                            MirozDataSource.requestTvLink(video.did, mLinkCallback)
+                        }
                     }
                 }
             }

@@ -85,7 +85,7 @@ class AllTvDetailsHelper(val page:Int,val pageSize:Int,val video: VideoInfo):Com
     override fun onCall(value: List<EpsItem>) {
         AppLog.logE("eps success $mSeasonIndex ${value.size}")
         mAllEpsItem.addAll(value)
-        if(value.size == pageSize){
+        if(value.isNotEmpty()){
             requestNextEps()
         }else{
             //这一个的Eps加载完了 加载下一个

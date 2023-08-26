@@ -5,6 +5,7 @@ import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 /**
@@ -34,8 +35,9 @@ class MutilLinkRoadSaveTask(val data: MutableList<VideoEntity>, val taskCount: I
     }
 
     fun start() {
+        val newData = ArrayList(data)
         for (idx in 0 until taskCount) {
-            val task = LinkRoadSaveTask(data)
+            val task = LinkRoadSaveTask(Collections.synchronizedList(newData))
             task.start()
             taskList.add(task)
         }
@@ -66,6 +68,7 @@ class MutilLinkRoadSaveTask(val data: MutableList<VideoEntity>, val taskCount: I
         for (linkRoadSaveTask in taskList) {
             linkRoadSaveTask.stop()
         }
+        taskList.clear()
         mDis?.let {
             if (!it.isDisposed) {
                 it.dispose()

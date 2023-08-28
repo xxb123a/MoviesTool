@@ -66,6 +66,14 @@ object TvManager {
         return mTvMTask?.getAllLoadCompleteSize() ?: 0
     }
 
+    fun getCurrentTvCount():Int{
+        return mTvMTask?.getCurrentTvCount() ?: 0
+    }
+
+    fun getTvTotalCount():Int{
+        return mFirstVideoList.size
+    }
+
     fun getLoadData(): List<EpsItem> {
         return mTvMTask?.getAllLoadData() ?: emptyList()
     }
@@ -97,6 +105,7 @@ object TvManager {
                 mAttachCallback?.onFailed(msg)
             }
         })
+        mMovieLoader.findAllVideo()
     }
 
     private fun loadSeason() {
@@ -105,7 +114,7 @@ object TvManager {
         val task = TvSeasonMutliTask(
             Collections.synchronizedList(newData),
             DataApi.createCommonOkHttp(),
-            10
+            20
         )
         mTvMTask = task
         task.setAttachCallback(mCommonCallback)
@@ -114,6 +123,7 @@ object TvManager {
 
 
     fun stop() {
+        setAttachCallback(null)
         mTvMTask?.stop()
         mTvMTask = null
     }

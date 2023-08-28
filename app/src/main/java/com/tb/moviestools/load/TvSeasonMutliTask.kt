@@ -42,7 +42,11 @@ class TvSeasonMutliTask(
         for (seasonSingleTask in mCacheTask) {
             count += seasonSingleTask.getData().size
         }
-        return 0
+        return count
+    }
+
+    fun getCurrentTvCount():Int{
+        return data.size
     }
 
     fun getAllFailedCount(): Int {
@@ -74,6 +78,7 @@ class TvSeasonMutliTask(
         if (isLoading()) {
             return
         }
+        mCacheTask.clear()
         for (idx in 0 until maxCount) {
             val task = SeasonSingleTask(data, okhttp)
             mCacheTask.add(task)
@@ -106,6 +111,7 @@ class TvSeasonMutliTask(
         private val mCacheList = ArrayList<EpsItem>()
         private var attachCallback: CommonCallback<List<EpsItem>>? = null
         private var mFailedCount = 0
+        private var lastAllTvDetailsHelper: AllTvDetailsHelper? = null
         private val commonCallback = object : CommonCallback<List<EpsItem>> {
             override fun onCall(value: List<EpsItem>) {
                 mCacheList.addAll(value)
@@ -139,6 +145,7 @@ class TvSeasonMutliTask(
         }
 
         private fun next() {
+            if(isStop)return
             if (_data.isEmpty()) {
                 isStop = true
                 attachCallback?.onCall(mCacheList)
@@ -151,12 +158,14 @@ class TvSeasonMutliTask(
                 return
             }
             val helper = AllTvDetailsHelper(1, 20, _data)
+            lastAllTvDetailsHelper = helper
             helper.setCallback(commonCallback)
             helper.find()
         }
 
         fun stop() {
             isStop = true
+            lastAllTvDetailsHelper?.stop()
         }
     }
 }

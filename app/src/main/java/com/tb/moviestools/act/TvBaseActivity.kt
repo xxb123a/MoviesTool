@@ -55,19 +55,22 @@ class TvBaseActivity : AppCompatActivity() {
 
     private val tvCallback = object : CommonCallback<List<EpsItem>> {
         override fun onCall(value: List<EpsItem>) {
-            closeDispose(mDispose)
-            val txt = "加载成功 count ${value.size} failedCount ${TvManager.getFailedCount()}\n 如果有失败数据 请再次点击获取按钮"
-            mShowInfoTv.text = txt
-            mAllEps = value
-            setAllBtn(true)
-
+            runOnUiThread {
+                closeDispose(mDispose)
+                val txt = "加载成功 count ${value.size} failedCount ${TvManager.getFailedCount()}\n 如果有失败数据 请再次点击获取按钮"
+                mShowInfoTv.text = txt
+                mAllEps = value
+                setAllBtn(true)
+            }
         }
 
         @SuppressLint("SetTextI18n")
         override fun onFailed(msg: String) {
-            closeDispose(mDispose)
-            mShowInfoTv.text = "加载出错 $msg"
-            mBtn.isEnabled = true
+            runOnUiThread {
+                closeDispose(mDispose)
+                mShowInfoTv.text = "加载出错 $msg"
+                mBtn.isEnabled = true
+            }
         }
     }
 
@@ -115,11 +118,16 @@ class TvBaseActivity : AppCompatActivity() {
     private fun startDispose() {
         closeDispose(mDispose)
         mDispose = Observable.interval(3, 1, TimeUnit.SECONDS)
-            .map { TvManager.getLoadDataSize() }
+            .map { arrayOf(TvManager.getLoadDataSize(),TvManager.getTvTotalCount() - TvManager.getCurrentTvCount(),TvManager.getTvTotalCount(),TvManager.getFailedCount()) }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe {
-                mShowInfoTv.text = "正在加载中。。。 加载个数 ${it * 1000}"
+                if(it[2] == 0){
+                    mShowInfoTv.text = "正在加载中，请稍等"
+                }else{
+                    val progress = ((it[1] * 1f / it[2]) * 100).toInt()
+                    mShowInfoTv.text = "加载进度 ${progress}% ${it[1]}/${it[2]} -> ${it[0]} \n failedCount : ${it[3]}"
+                }
             }
     }
 
@@ -194,7 +202,7 @@ class TvBaseActivity : AppCompatActivity() {
     override fun onDestroy() {
         closeDispose(mStartDispose)
         closeDispose(mDispose)
-        TvManager.setAttachCallback(null)
+        TvManager.stop()
         super.onDestroy()
     }
 

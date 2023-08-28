@@ -13,12 +13,6 @@
         android:text="获取电视剧基本数据"
         />
     <Button
-        android:id="@+id/tv_save"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="保存基础数据"
-        />
-    <Button
         android:id="@+id/tv_crate_link"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

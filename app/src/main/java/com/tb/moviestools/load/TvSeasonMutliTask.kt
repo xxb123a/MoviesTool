@@ -45,7 +45,7 @@ class TvSeasonMutliTask(
         return count
     }
 
-    fun getCurrentTvCount():Int{
+    fun getCurrentTvCount(): Int {
         return data.size
     }
 
@@ -112,18 +112,6 @@ class TvSeasonMutliTask(
         private var attachCallback: CommonCallback<List<EpsItem>>? = null
         private var mFailedCount = 0
         private var lastAllTvDetailsHelper: AllTvDetailsHelper? = null
-        private val commonCallback = object : CommonCallback<List<EpsItem>> {
-            override fun onCall(value: List<EpsItem>) {
-                mCacheList.addAll(value)
-                next()
-            }
-
-            override fun onFailed(msg: String) {
-                AppLog.logE("tv Season failed $msg")
-                mFailedCount++
-                next()
-            }
-        }
 
         fun getFailedCount() = mFailedCount
 
@@ -144,22 +132,44 @@ class TvSeasonMutliTask(
             next()
         }
 
+        private fun findNextVideoInfo(): VideoInfo? {
+            while (_data.isNotEmpty()) {
+                val itemData = _data.removeFirst()
+                if (TvManager.isCacheTvInfo(itemData.id)) {
+                    continue
+                }
+                //如果不为空 也不用请求
+                if(itemData.tvAllEps?.isNotEmpty() == true){
+                    continue
+                }
+                return itemData
+            }
+            return null
+        }
+
         private fun next() {
-            if(isStop)return
-            if (_data.isEmpty()) {
+            if (isStop) return
+            val itemData = findNextVideoInfo()
+            if (itemData == null) {
                 isStop = true
                 attachCallback?.onCall(mCacheList)
                 return
             }
-            val _data = _data.removeFirst()
-            val list = _data.tvAllEps
-            if (list != null && list.isNotEmpty()) {
-                commonCallback.onCall(list)
-                return
-            }
-            val helper = AllTvDetailsHelper(1, 20, _data)
+            val helper = AllTvDetailsHelper(1, 20, itemData)
             lastAllTvDetailsHelper = helper
-            helper.setCallback(commonCallback)
+            helper.setCallback(object : CommonCallback<List<EpsItem>> {
+                override fun onCall(value: List<EpsItem>) {
+                    mCacheList.addAll(value)
+                    TvManager.addCacheTvInfo(itemData)
+                    next()
+                }
+
+                override fun onFailed(msg: String) {
+                    AppLog.logE("tv Season failed $msg")
+                    mFailedCount++
+                    next()
+                }
+            })
             helper.find()
         }
 

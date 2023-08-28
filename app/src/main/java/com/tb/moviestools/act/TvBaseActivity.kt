@@ -11,13 +11,13 @@ import androidx.appcompat.app.AppCompatActivity
 import com.tb.moviestools.*
 import com.tb.moviestools.db.entity.VideoEntity
 import com.tb.moviestools.load.TvManager
+import com.tb.moviestools.task.MutilLinkRoadSaveTask
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 
 /**
  *_    .--,       .--,
@@ -42,14 +42,12 @@ class TvBaseActivity : AppCompatActivity() {
             activity.startActivity(Intent(activity, TvBaseActivity::class.java))
         }
     }
-
+    private var linkCreateTask: MutilLinkRoadSaveTask? = null
     private val mShowInfoTv by lazy { findViewById<TextView>(R.id.tv_info) }
     private val mBtn by lazy { findViewById<View>(R.id.tv_button) }
-    private val mBtnSave by lazy { findViewById<View>(R.id.tv_save) }
     private val mBtnCreateLink by lazy { findViewById<View>(R.id.tv_crate_link) }
     private val mBtnUploadLink by lazy { findViewById<View>(R.id.tv_upload_link) }
     private val mAllVideos = ArrayList<VideoEntity>()
-    private var mAllEps :List<EpsItem> = ArrayList()
     private var mDispose: Disposable? = null
     private var mStartDispose: Disposable? = null
 
@@ -57,9 +55,9 @@ class TvBaseActivity : AppCompatActivity() {
         override fun onCall(value: List<EpsItem>) {
             runOnUiThread {
                 closeDispose(mDispose)
-                val txt = "加载成功 count ${value.size} failedCount ${TvManager.getFailedCount()}\n 如果有失败数据 请再次点击获取按钮"
+                val txt =
+                    "保存成功 count ${value.size} failedCount ${TvManager.getFailedCount()}\n 如果有失败数据 请再次点击获取按钮"
                 mShowInfoTv.text = txt
-                mAllEps = value
                 setAllBtn(true)
             }
         }
@@ -74,6 +72,16 @@ class TvBaseActivity : AppCompatActivity() {
         }
     }
 
+    private val updateLinkProgressTask = object : MutilLinkRoadSaveTask.TaskCallback{
+        override fun update(failedCount: Int, successCount: Int, totalCount: Int) {
+            mShowInfoTv.text = "link create failed $failedCount suc $successCount total $totalCount"
+            if(failedCount + successCount >= totalCount){
+                mShowInfoTv.text = "链接创建完成 失败个数 $failedCount 成功个数 $successCount"
+                setAllBtn(true)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tv_load)
@@ -83,13 +91,7 @@ class TvBaseActivity : AppCompatActivity() {
         mBtnCreateLink.setOnClickListener {
             if (mAllVideos.isEmpty()) return@setOnClickListener
             setAllBtn(false)
-        }
-        mBtnSave.setOnClickListener {
-            if(mAllEps.isEmpty())return@setOnClickListener
-            showReSaveDialog{
-                setAllBtn(false)
-                saveAllEps()
-            }
+            startCreateLink()
         }
         TvManager.setAttachCallback(tvCallback)
         setAllBtn(false)
@@ -99,6 +101,16 @@ class TvBaseActivity : AppCompatActivity() {
             loadLocalData()
         }
     }
+
+
+    private fun startCreateLink(){
+        linkCreateTask?.stop()
+        val task = MutilLinkRoadSaveTask(mAllVideos,5)
+        linkCreateTask = task
+        task.setCallback(updateLinkProgressTask)
+        task.start()
+    }
+
 
     private fun loadBaseTvs() {
         if (mAllVideos.isEmpty()) {
@@ -118,15 +130,23 @@ class TvBaseActivity : AppCompatActivity() {
     private fun startDispose() {
         closeDispose(mDispose)
         mDispose = Observable.interval(3, 1, TimeUnit.SECONDS)
-            .map { arrayOf(TvManager.getLoadDataSize(),TvManager.getTvTotalCount() - TvManager.getCurrentTvCount(),TvManager.getTvTotalCount(),TvManager.getFailedCount()) }
+            .map {
+                arrayOf(
+                    TvManager.getLoadDataSize(),
+                    TvManager.getTvTotalCount() - TvManager.getCurrentTvCount(),
+                    TvManager.getTvTotalCount(),
+                    TvManager.getFailedCount()
+                )
+            }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe {
-                if(it[2] == 0){
+                if (it[2] == 0) {
                     mShowInfoTv.text = "正在加载中，请稍等"
-                }else{
+                } else {
                     val progress = ((it[1] * 1f / it[2]) * 100).toInt()
-                    mShowInfoTv.text = "加载进度 ${progress}% ${it[1]}/${it[2]} -> ${it[0]} \n failedCount : ${it[3]}"
+                    mShowInfoTv.text =
+                        "加载进度 ${progress}% ${it[1]}/${it[2]} -> ${it[0]} \n failedCount : ${it[3]}"
                 }
             }
     }
@@ -152,43 +172,6 @@ class TvBaseActivity : AppCompatActivity() {
         mBtn.isEnabled = enable
         mBtnCreateLink.isEnabled = enable
         mBtnUploadLink.isEnabled = enable
-        mBtnSave.isEnabled = enable
-    }
-
-    private fun saveAllEps(){
-        val dis = Observable.just("")
-            .map { TheApp.dao.deleteByType(1) }
-            .map { epsList2VideoList(mAllEps) }
-            .map { TheApp.dao.addAll(it) }
-            .map { TheApp.dao.getAll(1) }
-            .map {
-                mAllVideos.clear()
-                mAllVideos.addAll(it)
-                it.size
-            }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe {
-                setAllBtn(true)
-                val text = "save success \n 更新后数据库中已经有 $it 条数据"
-                mShowInfoTv.text = text
-            }
-    }
-    private fun epsList2VideoList(eps:List<EpsItem>):List<VideoEntity>{
-        val result = ArrayList<VideoEntity>()
-        for (ep in eps) {
-            result.add(eps2VideoEntity(ep))
-        }
-        return result
-    }
-
-    private fun eps2VideoEntity(eps:EpsItem):VideoEntity{
-        val ve = VideoEntity()
-        ve.name = eps.title
-        ve.did = eps.id
-        //1代表Tv
-        ve.type = 1
-        return ve
     }
 
     private fun closeDispose(dis: Disposable?) {
@@ -202,6 +185,7 @@ class TvBaseActivity : AppCompatActivity() {
     override fun onDestroy() {
         closeDispose(mStartDispose)
         closeDispose(mDispose)
+        linkCreateTask?.stop()
         TvManager.stop()
         super.onDestroy()
     }

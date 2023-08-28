@@ -1,12 +1,12 @@
 package com.tb.moviestools.load
 
-import com.tb.moviestools.AppLog
-import com.tb.moviestools.CommonCallback
-import com.tb.moviestools.EpsItem
-import com.tb.moviestools.VideoInfo
+import com.tb.moviestools.*
 import com.tb.moviestools.api.AllDataHelper
 import com.tb.moviestools.api.DataApi
+import com.tb.moviestools.db.entity.TvBaseEntity
+import com.tb.moviestools.db.entity.VideoEntity
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  *_    .--,       .--,
@@ -28,6 +28,8 @@ import java.util.*
 object TvManager {
     //tv 一级目录加载
     private val mMovieLoader = AllDataHelper(1, 1000, 2)
+
+    private val mAReadyCacheTv = Collections.synchronizedList(ArrayList<String>())
 
     private var step = 0
 
@@ -53,6 +55,33 @@ object TvManager {
 
     fun getFailedCount():Int{
         return mTvMTask?.getAllFailedCount() ?: 0
+    }
+
+    //初始化已经缓存好的tv基础数据
+    fun initLoadCacheTvInfo(){
+        Thread{
+            val dao = TheApp.db.tvBaseDao()
+            for (tvBaseEntity in dao.getAll()) {
+                mAReadyCacheTv.add(tvBaseEntity.tid)
+            }
+            AppLog.logE("ready tv loadComplete")
+        }.start()
+    }
+
+    fun addCacheTvInfo(info:VideoInfo){
+        val allEps = info.tvAllEps ?: return
+        if(allEps.isEmpty())return
+        mAReadyCacheTv.add(info.id)
+        val te = TvBaseEntity()
+        te.name = info.name
+        te.tid = info.id
+        TheApp.db.tvBaseDao().add(te)
+        TheApp.dao.addAll(epsList2VideoList(allEps))
+        AppLog.logE("eps save success ${te.tid} -> ${allEps.size}")
+    }
+
+    fun isCacheTvInfo(tid:String):Boolean{
+        return mAReadyCacheTv.contains(tid)
     }
 
     fun isLoading(): Boolean {
@@ -127,4 +156,22 @@ object TvManager {
         mTvMTask?.stop()
         mTvMTask = null
     }
+
+    private fun epsList2VideoList(eps:List<EpsItem>):List<VideoEntity>{
+        val result = ArrayList<VideoEntity>()
+        for (ep in eps) {
+            result.add(eps2VideoEntity(ep))
+        }
+        return result
+    }
+
+    private fun eps2VideoEntity(eps:EpsItem): VideoEntity {
+        val ve = VideoEntity()
+        ve.name = eps.title
+        ve.did = eps.id
+        //1代表Tv
+        ve.type = 1
+        return ve
+    }
+
 }

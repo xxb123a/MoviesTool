@@ -1,9 +1,9 @@
 package com.tb.moviestools.db
 
-import androidx.room.Database
-import androidx.room.RoomDatabase
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
 import com.tb.moviestools.db.entity.TvBaseEntity
-import com.tb.moviestools.db.entity.VideoEntity
 
 /**
  *_    .--,       .--,
@@ -19,13 +19,15 @@ import com.tb.moviestools.db.entity.VideoEntity
  *_      ___)( )(___
  *_     (((__) (__)))    高山仰止,景行行止.虽不能至,心向往之。
  * author      : xue
- * date        : 2023/8/25 14:02
+ * date        : 2023/8/28 14:06
  * description :
  */
-@Database(entities = [VideoEntity::class,TvBaseEntity::class], version = 2, exportSchema = false)
-abstract class AppDataBase : RoomDatabase() {
+@Dao
+interface TvBaseDao {
 
-    abstract fun videoDao(): VideoDao
+    @Query("select * from tv_entity")
+    fun getAll(): List<TvBaseEntity>
 
-    abstract fun tvBaseDao():TvBaseDao
+    @Insert
+    fun add(vararg entity: TvBaseEntity)
 }

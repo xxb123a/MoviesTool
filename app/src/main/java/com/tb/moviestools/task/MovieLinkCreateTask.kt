@@ -1,6 +1,7 @@
 package com.tb.moviestools.task
 
 import com.libsign.libsign.MirozDataSource
+import com.tb.moviestools.AppLog
 import com.tb.moviestools.CommonCallback
 import com.tb.moviestools.api.DataApi
 import com.tb.moviestools.db.entity.VideoEntity
@@ -102,6 +103,7 @@ class MovieLinkCreateTask(val video: VideoEntity, val okhttp: OkHttpClient) {
             .subscribe {
                 if (it) {
                     callback?.onCall("")
+                    AppLog.logE("link save success ${video.did}")
                 } else {
                     callback?.onFailed("saveFile failed")
                 }

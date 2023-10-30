@@ -19,5 +19,36 @@
         android:layout_height="wrap_content"
         android:text="电视剧"
         />
-
+    <Button
+        android:id="@+id/btn_browser"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="浏览缓存文件夹"
+        />
+    <Button
+        android:id="@+id/btn_zip_movie"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="生成电影压缩文件"
+        />
+    <Button
+        android:id="@+id/btn_zip_tv1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="test zip"
+        />
+    <Button
+        android:id="@+id/btn_delete_tv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="test merge"
+        />
+    <TextView
+        android:id="@+id/tv_info"
+        android:layout_width="wrap_content"
+        android:textColor="@color/black"
+        android:gravity="center_horizontal"
+        tools:text="100%"
+        android:layout_gravity="center_horizontal"
+        android:layout_height="wrap_content"/>
 </LinearLayout>

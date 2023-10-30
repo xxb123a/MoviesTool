@@ -23,6 +23,7 @@ class AllTvDetailsHelper(val page:Int,val pageSize:Int,val video: VideoInfo):Com
     private var callback: CommonCallback<List<EpsItem>>? = null
     private var mAttachCount = 0
     private var mSeasonIndex = 0
+    private var isStop = false
     private val mSeasonList = ArrayList<SeasonItem>()
     private val mAllEpsItem = ArrayList<EpsItem>()
     private var isLoading = false
@@ -32,9 +33,14 @@ class AllTvDetailsHelper(val page:Int,val pageSize:Int,val video: VideoInfo):Com
         this.callback = callback
     }
 
+    fun stop(){
+        isStop = true
+    }
+
     private fun findSeason(){
         DataApi.getSeasonInfo(video.id,object : CommonCallback<List<SeasonItem>>{
             override fun onCall(value: List<SeasonItem>) {
+                if(isStop)return
                 if(value.isEmpty()){
                     callback?.onFailed("SeasonItem get failed")
                     return
@@ -46,6 +52,7 @@ class AllTvDetailsHelper(val page:Int,val pageSize:Int,val video: VideoInfo):Com
             }
 
             override fun onFailed(msg: String) {
+                if(isStop)return
                 AppLog.logE("season failed $msg")
                 callback?.onFailed("season failed $msg")
             }
@@ -83,17 +90,20 @@ class AllTvDetailsHelper(val page:Int,val pageSize:Int,val video: VideoInfo):Com
     }
 
     override fun onCall(value: List<EpsItem>) {
-        AppLog.logE("eps success $mSeasonIndex ${value.size}")
+        if(isStop)return
+        AppLog.logE("${video.id} eps suc season: $mSeasonIndex - page:${page + mAttachCount} ${value.size}")
         mAllEpsItem.addAll(value)
-        if(value.size == pageSize){
-            requestNextEps()
-        }else{
-            //这一个的Eps加载完了 加载下一个
-            requestNextSeason()
-        }
+//        if(pageSize == value.size){
+//            requestNextEps()
+//        }else{
+//            //这一个的Eps加载完了 加载下一个
+//            requestNextSeason()
+//        }
+        requestNextSeason()
     }
 
     override fun onFailed(msg: String) {
+        if(isStop)return
         AppLog.logE("eps failed $mSeasonIndex $msg")
         callback?.onFailed("eps failed $mSeasonIndex $msg")
     }

@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.pm.PackageInfo
 import androidx.room.Room
 import com.tb.moviestools.db.AppDataBase
+import com.tb.moviestools.db.mig.Mig_1_2
+import com.tb.moviestools.load.TvManager
 
 /**
  *_    .--,       .--,
@@ -24,8 +26,11 @@ import com.tb.moviestools.db.AppDataBase
  */
 class TheApp : Application() {
     companion object{
-
-        val dao by lazy { Room.databaseBuilder(instance!!,AppDataBase::class.java,"cache.db").allowMainThreadQueries().build().videoDao() }
+        val db by lazy { Room.databaseBuilder(instance!!,AppDataBase::class.java,"cache.db")
+            .addMigrations(Mig_1_2())
+            .allowMainThreadQueries()
+            .build() }
+        val dao by lazy { db.videoDao() }
 
         var instance:TheApp? = null
 
@@ -42,5 +47,6 @@ class TheApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        TvManager.initLoadCacheTvInfo()
     }
 }

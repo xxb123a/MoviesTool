@@ -1,8 +1,6 @@
 package com.tb.moviestools.api
 
 import android.annotation.SuppressLint
-import android.util.ArrayMap
-import com.libsign.libsign.MirozDataSource
 import com.tb.moviestools.CommonCallback
 import com.tb.moviestools.EpsItem
 import com.tb.moviestools.SeasonItem
@@ -12,6 +10,8 @@ import org.json.JSONObject
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.net.Proxy
 import java.security.SecureRandom
@@ -66,7 +66,7 @@ object DataApi {
                         val dataType = dataObj?.optString("data_type")
                         val jsonArray = dataObj?.optJSONArray("minfo")
                         if (jsonArray == null) {
-                            callback.onFailed("json error")
+                            callback.onFailed("video list json error")
                         } else {
                             val resultList = ArrayList<VideoInfo>()
                             val len = jsonArray.length()
@@ -103,7 +103,7 @@ object DataApi {
                     try {
                         val obj = JSONObject(value).optJSONArray("data")
                         if (obj == null || obj.length() == 0) {
-                            callback.onFailed("json error")
+                            callback.onFailed("season info json error")
                         } else {
                             val seasonList = ArrayList<SeasonItem>()
                             for (idx in 0 until obj.length()) {
@@ -144,7 +144,7 @@ object DataApi {
                         val epsList =
                             JSONObject(value).optJSONObject("data")?.optJSONArray("eps_list")
                         if (epsList == null) {
-                            callback.onFailed("json error")
+                            callback.onFailed("eps json error")
                         } else {
                             val list = ArrayList<EpsItem>()
                             for (idx in 0 until epsList.length()) {
@@ -255,6 +255,34 @@ object DataApi {
         params["deviceNo"] = "D5C27BB2-3272-4CA9-869F-771A5DA1DABB"
         params["token"] = "1"
         return params
+    }
+
+    fun getUrlContent(url:String,okClient:OkHttpClient):String{
+        try {
+            val request = Request.Builder().url(url).build()
+            val response = okClient.newCall(request).execute()
+            if(response.isSuccessful){
+                return response.body()?.string() ?: ""
+            }
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+        return ""
+    }
+
+    fun readStringByFile(path: String): String {
+        val file = File(path)
+        if (file.exists() && file.length() > 0) {
+            try {
+                val ins = FileInputStream(file)
+                val result = String(ins.readBytes())
+                ins.close()
+                return result
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return ""
     }
 
     fun createRetrofit(host: String): Retrofit {

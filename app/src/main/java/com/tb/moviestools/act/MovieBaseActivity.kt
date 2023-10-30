@@ -2,16 +2,21 @@ package com.tb.moviestools.act
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.tb.moviestools.*
+import com.tb.moviestools.db.entity.VideoEntity
+import com.tb.moviestools.load.MovieManager
+import com.tb.moviestools.task.MutilLinkRoadSaveTask
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 /**
@@ -44,6 +49,8 @@ class MovieBaseActivity : AppCompatActivity() {
         override fun onCall(value: List<VideoInfo>) {
             closeDispose(mDispose)
             mShowInfoTv.text = "加载成功 count ${value.size}"
+            loadDataFormDb()
+
         }
 
         @SuppressLint("SetTextI18n")
@@ -53,32 +60,74 @@ class MovieBaseActivity : AppCompatActivity() {
             mBtn.isEnabled = true
         }
     }
+    private val updateLinkProgressTask = object : MutilLinkRoadSaveTask.TaskCallback{
+        override fun update(failedCount: Int, successCount: Int, totalCount: Int) {
+            mShowInfoTv.text = "link create failed $failedCount suc $successCount total $totalCount"
+            if(failedCount + successCount >= totalCount){
+                mShowInfoTv.text = "链接创建完成 失败个数 $failedCount 成功个数 $successCount"
+                setAllBtn(true)
+            }
+        }
+    }
+    private var linkCreateTask: MutilLinkRoadSaveTask? = null
     private var mDispose: Disposable? = null
     private var mStartDispose: Disposable? = null
     private val mShowInfoTv by lazy { findViewById<TextView>(R.id.tv_info) }
     private val mBtn by lazy { findViewById<View>(R.id.tv_button) }
-
+    private val mAllVideos = ArrayList<VideoEntity>()
     private val mBtnCreateLink by lazy { findViewById<View>(R.id.tv_crate_link) }
 
     private val mBtnUploadLink by lazy { findViewById<View>(R.id.tv_upload_link) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_movie_load)
         MovieManager.setMovieCallback(movieCallback)
         mBtn.setOnClickListener {
-            it.isEnabled = false
-            MovieManager.loadMovies()
-            startDispose()
+            loadBaseMovies()
         }
-        mBtn.isEnabled = false
-        mBtnCreateLink.isEnabled = false
-        mBtnUploadLink.isEnabled = false
-        if(MovieManager.isLoadingMovie()){
+        mBtnCreateLink.setOnClickListener {
+            if(mAllVideos.isEmpty())return@setOnClickListener
+            setAllBtn(false)
+            startCreateLink()
+        }
+
+        setAllBtn(false)
+        if (MovieManager.isLoadingMovie()) {
             //正在加载中
             startDispose()
-        }else{
+        } else {
             loadLocalData()
         }
+    }
+
+
+    private fun loadBaseMovies(){
+        if(mAllVideos.isEmpty()){
+            setAllBtn(false)
+            MovieManager.loadMovies()
+            startDispose()
+        }else{
+            showReGetDialog {
+                setAllBtn(false)
+                MovieManager.loadMovies()
+                startDispose()
+            }
+        }
+    }
+
+    private fun setAllBtn(enable:Boolean){
+        mBtn.isEnabled = enable
+        mBtnCreateLink.isEnabled = enable
+        mBtnUploadLink.isEnabled = enable
+    }
+
+    private fun startCreateLink(){
+        linkCreateTask?.stop()
+        val task = MutilLinkRoadSaveTask(mAllVideos,1)
+        linkCreateTask = task
+        task.setCallback(updateLinkProgressTask)
+        task.start()
     }
 
     private fun loadLocalData() {
@@ -86,18 +135,29 @@ class MovieBaseActivity : AppCompatActivity() {
         closeDispose(mStartDispose)
         mStartDispose = Observable.just(TheApp.dao)
             .map {
-                it.getAll(0)
-            }
-            .map {
-                it.size
+                mAllVideos.addAll(it.getAll(0))
+                mAllVideos.size
             }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe {
-                mBtn.isEnabled = true
+                setAllBtn(true)
                 mShowInfoTv.text = "数据库中已经有 $it 条数据"
             }
 
+    }
+
+    private fun loadDataFormDb(){
+        mAllVideos.clear()
+        val dis = Observable.just(TheApp.dao)
+            .map {
+                mAllVideos.addAll(it.getAll(0))
+            }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                setAllBtn(true)
+            }
     }
 
     @SuppressLint("SetTextI18n")
@@ -121,8 +181,22 @@ class MovieBaseActivity : AppCompatActivity() {
         }
     }
 
+    private fun showReGetDialog(call:()->Unit){
+        AlertDialog.Builder(this)
+            .setMessage("你需要重新获取基本数据吗")
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.cancel()
+            }
+            .setPositiveButton("获取") { dialog, _ ->
+                dialog.cancel()
+                call.invoke()
+            }
+            .show()
+    }
+
     override fun onDestroy() {
         MovieManager.setMovieCallback(null)
+        linkCreateTask?.stop()
         closeDispose(mStartDispose)
         closeDispose(mDispose)
         super.onDestroy()

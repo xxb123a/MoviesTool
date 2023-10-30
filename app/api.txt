@@ -1,0 +1,73 @@
+网站地址：https://www.downloader.world/
+
+api host: https://www.downloader.world/api
+
+公共参数：所有接口 固定写死就好
+
+params["app_id"] = "100"
+params["device_os"] = "android"
+params["lang"] = "en"
+params["device"] = "android"
+params["app_ver"] = "1.0.0"
+params["os_ver"] = "11.1.1"
+params["resolution"] = "800*600"
+params["deviceNo"] = "D5C27BB2-3272-4CA9-869F-771A5DA1DABB"
+params["token"] = "1"
+
+list 接口： $host/video/
+请求参数 + 公共参数
+ params["page"] = page.toString() //page  从1开始
+ params["page_size"] = pageSize.toString() // 经过测试 不要超过1000
+ params["type"] = type.toString() //"All":100,"Movies":1,"TV Series":2
+
+ params["genre"] = "100" //电影分类，"All Genres":100,....
+ params["orderby"] = "1" //排序方式,"Popular":1,"Rated":2,"Release":3
+ params["cntyno"] = "100" //国家，"All Countries":100,....
+ params["pubdate"] = "100" //更新日期，"All Release Years":100,....
+
+返回数据：{"data":{ "minfo":[
+        {"id":xxxx}
+] },"xxx":xxxx}
+取里面的id 就是视频id  电影id 直接可以对应，电视剧id 还需要请求Season 和 Eps 接口
+
+Season 接口： $host/video_season/  用于电视剧获取电视剧的季目录     电视剧-》第几季-》第几集   list id -> season id -> eps id (这个id 对应文件夹id)
+请求参数 + 公共参数
+params["tab"] = "1"
+params["id"] = videoId //列表接口返回的id
+
+返回数据
+{"data":[{"id":xxx,"xxx":xxx}],"xxx":xxx} 这个id 用于请求电视剧的第几集的内容
+
+Eps 接口：$host/video_ssn/  用于请求电视剧具体集的内容
+请求参数 + 公共参数
+ params["page"] = "1"
+ params["page_size"] = "20"
+ params["type"] = "2"
+ params["ssn_id"] = ssnId //用 season 接口获取到的id
+
+返回数据 这个id 对应tv 下文件夹id
+{
+    "data":{
+        "xxx":xxx
+        "eps_list":[
+            {
+                "id":"123",
+                "title":"sss",
+                "eps_num":123
+            }
+        ]
+    }
+    "xxx":xxx
+}
+
+//详情接口
+$host/video_detail/
+请求参数 + 公共参数
+ params["page"] = "1"
+ params["page_size"] = "20"
+ params["id"] = "电影id"
+
+ //如果是电视剧需要传下面的参数
+ params["type"] = "2"
+ params["ssn_id"] = ssnId //用 season 接口获取到的id
+ params["eps_id"] = epsId //集id
